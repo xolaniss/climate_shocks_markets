@@ -89,7 +89,7 @@ developed_markets_temp_gg <-
   ) +
   labs(
     title = "Daily Temperature in Developed Markets",
-    x = "Date",
+    x = "Time",
     y = "Temperature (°C)",
     color = "Country"
   )
@@ -104,7 +104,7 @@ developed_markets_precip_gg <-
   ) +
   labs(
     title = "Daily Precipitation in Developed Markets",
-    x = "Date",
+    x = "Time",
     y = "Precipitation (mm)",
     color = "Country"
   )

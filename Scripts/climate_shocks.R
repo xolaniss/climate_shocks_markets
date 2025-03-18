@@ -48,14 +48,21 @@ developed_markets_precip_tbl <- read_rds(here("Outputs", "artifacts_climate_data
   dplyr::select(-year, -precip2)
 
 # Anomalies ---------------------------------------------------------------
-temp_static_mean_anomaly_tbl <-
+## Rolling mean ---------------------------------------------------------
+rolling_mean = slidify(
+  .f = mean,
+  .period = 120,
+  .align = "right",
+  .partial = TRUE
+)
+
+temp_rolling_mean_anomaly_tbl <-
   developed_markets_temp_tbl |>
   group_by(country) |>
-  mutate(temp_mean = mean(temp)) |>
+  mutate(temp_mean = rolling_mean(temp)) |>
   mutate(anomaly = temp - temp_mean)
 
-# Graphing ---------------------------------------------------------------
-temp_static_mean_anomaly_tbl |>
+temp_rolling_mean_anomaly_tbl |>
   fx_plot(
     col = "country",
     value = "anomaly",
@@ -65,6 +72,53 @@ temp_static_mean_anomaly_tbl |>
        x = "Date",
        y = "Anomaly")
 
+precip_rolling_mean_anomaly_tbl <-
+  developed_markets_precip_tbl |>
+  group_by(country) |>
+  mutate(precip_mean = rolling_mean(precip)) |>
+  mutate(anomaly = precip - precip_mean)
+
+precip_rolling_mean_anomaly_tbl |>
+  fx_plot(
+    col = "country",
+    value = "anomaly",
+    facet_var = "country"
+  ) +
+  labs(title = "Precipitation Anomalies",
+       x = "Date",
+       y = "Anomaly")
+
+## Using timetk anomalise function -------------------------------------
+temp_anomalise_tbl <-
+  developed_markets_temp_tbl |>
+  group_by(country) |>
+  anomalize(date, temp)
+
+temp_anomalise_gg <-
+  temp_anomalise_tbl |>
+  filter(anomaly == "Yes") |>
+  fx_plot(
+    date = "date",
+    col = "country",
+    value = "remainder",
+    facet_var = "country"
+  )
+
+
+precip_anomalise_tbl <-
+  developed_markets_precip_tbl |>
+  group_by(country) |>
+  anomalize(date, precip)
+
+precip_anomalise_gg <-
+  precip_anomalise_tbl |>
+  filter(anomaly == "Yes") |>
+  fx_plot(
+    date = "date",
+    col = "country",
+    value = "remainder",
+    facet_var = "country"
+  )
 
 
 # Export ---------------------------------------------------------------
