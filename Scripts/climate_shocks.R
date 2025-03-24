@@ -35,6 +35,8 @@ library(urca)
 library(mFilter)
 library(car)
 
+options(scipen = 999)
+
 # Functions ---------------------------------------------------------------
 source(here("Functions", "fx_plot.R"))
 
@@ -122,24 +124,24 @@ precip_anomalise_gg <-
   )
 
 
-## Using extreme values -----------------------------------------------
+## Using extreme values for temperature -----------------------------------------------
 country_extreme_function <- function(data, variable, extreme_level) {
   data |>
     group_by(country) |>
     mutate("{{variable}}_extreme_p_{extreme_level}" :=
-             ifelse(temp >= quantile({{variable}}, extreme_level), "Yes", "No")) |>
+             ifelse({{variable}} >= quantile({{variable}}, extreme_level), "Yes", "No")) |>
     mutate("{{variable}}_extreme_p_{1 - extreme_level}" :=
-             ifelse(temp <= quantile({{variable}}, 1 - extreme_level), "Yes", "No")) |>
+             ifelse({{variable}} <= quantile({{variable}}, 1 - extreme_level), "Yes", "No")) |>
     ungroup()
 }
 
-country_extreme_gg_function <- function(data, extreme_variable) {
+country_extreme_gg_function <- function(data, variable = "temp", extreme_variable) {
   data |>
     group_by(country) |>
-    filter({{ extreme_variable }} == "Yes") |>
+    filter({{extreme_variable}} == "Yes") |>
     fx_plot(
       col = "country",
-      value = "temp",
+      value = variable,
       facet_var = "country"
     )
 }
@@ -153,32 +155,78 @@ temp_extreme_tbl <-
 
 temp_p90_gg <-
   temp_extreme_tbl |>
-  country_extreme_gg_function(temp_extreme_p_0.9)
+  country_extreme_gg_function(extreme_variable = temp_extreme_p_0.9)
 temp_p10_gg <-
   temp_extreme_tbl |>
-  country_extreme_gg_function(temp_extreme_p_0.1)
+  country_extreme_gg_function(extreme_variable = temp_extreme_p_0.1)
 temp_p95_gg <-
   temp_extreme_tbl |>
-  country_extreme_gg_function(temp_extreme_p_.095)
+  country_extreme_gg_function(extreme_variable = temp_extreme_p_0.95)
 temp_p5_gg <-
   temp_extreme_tbl |>
-  country_extreme_gg_function(temp_extreme_p_.05)
+  country_extreme_gg_function(extreme_variable = temp_extreme_p_0.05)
 temp_p99_gg <-
   temp_extreme_tbl |>
-  country_extreme_gg_function(temp_extreme_p_.099)
+  country_extreme_gg_function(extreme_variable = temp_extreme_p_0.99)
 temp_p1_gg <-
   temp_extreme_tbl |>
-  country_extreme_gg_function(temp_extreme_p_.01)
+  country_extreme_gg_function(extreme_variable = temp_extreme_p_0.01)
 
 temp_p90_gg/ temp_p10_gg
 temp_p95_gg / temp_p5_gg
 temp_p99_gg / temp_p1_gg
 
-# Export ---------------------------------------------------------------
-artifacts_ <- list(
+## Using extreme values for precipitation -----------------------------------------------
+precip_extreme_tbl <-
+  developed_markets_precip_tbl |>
+  country_extreme_function(precip, 0.90) |>
+  country_extreme_function(precip, 0.95) |>
+  country_extreme_function(precip, 0.99)
 
+precip_p90_gg <-
+  precip_extreme_tbl |>
+  country_extreme_gg_function(variable = "precip", extreme_variable = precip_extreme_p_0.9)
+precip_p10_gg <-
+  precip_extreme_tbl |>
+  country_extreme_gg_function(variable = "precip", extreme_variable = precip_extreme_p_0.1)
+precip_p95_gg <-
+  precip_extreme_tbl |>
+  country_extreme_gg_function(variable = "precip", extreme_variable = precip_extreme_p_0.95)
+precip_p5_gg <-
+  precip_extreme_tbl |>
+  country_extreme_gg_function(variable = "precip", extreme_variable = precip_extreme_p_0.05)
+precip_p99_gg <-
+  precip_extreme_tbl |>
+  country_extreme_gg_function(variable = "precip", extreme_variable = precip_extreme_p_0.99)
+precip_p1_gg <-
+  precip_extreme_tbl |>
+  country_extreme_gg_function(variable = "precip", extreme_variable = precip_extreme_p_0.01)
+
+precip_p90_gg/ precip_p10_gg
+precip_p95_gg / precip_p5_gg
+precip_p99_gg / precip_p1_gg
+
+# Export ---------------------------------------------------------------
+artifacts_climate_shocks <- list(
+  data = list(
+    temp_rolling_mean_anomaly_tbl = temp_rolling_mean_anomaly_tbl,
+    precip_rolling_mean_anomaly_tbl = precip_rolling_mean_anomaly_tbl,
+    temp_anomalise_tbl = temp_anomalise_tbl,
+    precip_anomalise_tbl = precip_anomalise_tbl,
+    temp_extreme_tbl = temp_extreme_tbl
+  ),
+  plots = list(
+    temp_anomalise_gg = temp_anomalise_gg,
+    precip_anomalise_gg = precip_anomalise_gg,
+    temp_p90_gg = temp_p90_gg,
+    temp_p10_gg = temp_p10_gg,
+    temp_p95_gg = temp_p95_gg,
+    temp_p5_gg = temp_p5_gg,
+    temp_p99_gg = temp_p99_gg,
+    temp_p1_gg = temp_p1_gg
+    )
 )
 
-write_rds(artifacts_, file = here("Outputs", "artifacts_.rds"))
+write_rds(artifacts_climate_shocks, file = here("Outputs", "artifacts_climate_shocks.rds"))
 
 
