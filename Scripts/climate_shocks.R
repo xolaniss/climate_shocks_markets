@@ -48,12 +48,13 @@ developed_markets_precip_tbl <- read_rds(here("Outputs", "artifacts_climate_data
   dplyr::select(-year, -precip2)
 
 # Anomalies ---------------------------------------------------------------
+
 ## Rolling mean ---------------------------------------------------------
 rolling_mean = slidify(
   .f = mean,
-  .period = 120,
+  .period = 365*10,
   .align = "right",
-  .partial = TRUE
+  .partial = FALSE
 )
 
 temp_rolling_mean_anomaly_tbl <-
@@ -96,7 +97,7 @@ temp_anomalise_tbl <-
 
 temp_anomalise_gg <-
   temp_anomalise_tbl |>
-  filter(anomaly == "Yes") |>
+  # filter(anomaly == "Yes") |>
   fx_plot(
     date = "date",
     col = "country",
@@ -112,7 +113,7 @@ precip_anomalise_tbl <-
 
 precip_anomalise_gg <-
   precip_anomalise_tbl |>
-  filter(anomaly == "Yes") |>
+  # filter(anomaly == "Yes") |>
   fx_plot(
     date = "date",
     col = "country",
@@ -120,6 +121,58 @@ precip_anomalise_gg <-
     facet_var = "country"
   )
 
+
+## Using extreme values -----------------------------------------------
+country_extreme_function <- function(data, variable, extreme_level) {
+  data |>
+    group_by(country) |>
+    mutate("{{variable}}_extreme_p_{extreme_level}" :=
+             ifelse(temp >= quantile({{variable}}, extreme_level), "Yes", "No")) |>
+    mutate("{{variable}}_extreme_p_{1 - extreme_level}" :=
+             ifelse(temp <= quantile({{variable}}, 1 - extreme_level), "Yes", "No")) |>
+    ungroup()
+}
+
+country_extreme_gg_function <- function(data, extreme_variable) {
+  data |>
+    group_by(country) |>
+    filter({{ extreme_variable }} == "Yes") |>
+    fx_plot(
+      col = "country",
+      value = "temp",
+      facet_var = "country"
+    )
+}
+
+
+temp_extreme_tbl <-
+  developed_markets_temp_tbl |>
+  country_extreme_function(temp, 0.90) |>
+  country_extreme_function(temp, 0.95) |>
+  country_extreme_function(temp, 0.99)
+
+temp_p90_gg <-
+  temp_extreme_tbl |>
+  country_extreme_gg_function(temp_extreme_p_0.9)
+temp_p10_gg <-
+  temp_extreme_tbl |>
+  country_extreme_gg_function(temp_extreme_p_0.1)
+temp_p95_gg <-
+  temp_extreme_tbl |>
+  country_extreme_gg_function(temp_extreme_p_.095)
+temp_p5_gg <-
+  temp_extreme_tbl |>
+  country_extreme_gg_function(temp_extreme_p_.05)
+temp_p99_gg <-
+  temp_extreme_tbl |>
+  country_extreme_gg_function(temp_extreme_p_.099)
+temp_p1_gg <-
+  temp_extreme_tbl |>
+  country_extreme_gg_function(temp_extreme_p_.01)
+
+temp_p90_gg/ temp_p10_gg
+temp_p95_gg / temp_p5_gg
+temp_p99_gg / temp_p1_gg
 
 # Export ---------------------------------------------------------------
 artifacts_ <- list(
